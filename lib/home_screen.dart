@@ -600,8 +600,10 @@ class _HomeScreenState extends State<HomeScreen> {
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: ExpansionTile(
-                title: const Text("Today's Activities",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                title: const Text(
+                  "Today's Activities",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                ),
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -609,13 +611,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       stream: FirebaseFirestore.instance
                           .collection('activities')
                           .where('userId', isEqualTo: user!.uid)
+                          .where(
+                        'time',
+                        isGreaterThanOrEqualTo: Timestamp.fromDate(
+                          DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
+                        ),
+                      )
+                          .where(
+                        'time',
+                        isLessThan: Timestamp.fromDate(
+                          DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day).add(const Duration(days: 1)),
+                        ),
+                      )
                           .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
                         }
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Text("No activities yet.");
+                          return const Text("No activities for today.");
                         }
 
                         final docs = snapshot.data!.docs;
@@ -637,6 +651,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+
 
             const SizedBox(height: 20),
 
@@ -681,6 +696,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
 
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(

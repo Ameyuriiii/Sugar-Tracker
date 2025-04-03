@@ -1,8 +1,13 @@
+// ActivityManagerPage: This page allows users to manage their activities.
+// It displays a list of activities, enables adding, editing, and deleting activities,
+// and provides sorting and searching functionalities.
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+// Activity model class to represent an activity
 class Activity {
   String id;
   String name;
@@ -67,6 +72,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
     super.dispose();
   }
 
+  // Function to delete an activity and show a snackbar with undo option
   Future<void> _deleteActivity(String id, String name) async {
     final activitiesRef = FirebaseFirestore.instance.collection('activities');
     try {
@@ -77,7 +83,6 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () async {
-              // Placeholder for undo logic (requires storing deleted data temporarily)
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Undo not implemented yet')),
               );
@@ -97,6 +102,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return const Scaffold(
+        // Show login message if user is not authenticated
         body: Center(child: Text("Please log in first.", style: TextStyle(fontSize: 18))),
       );
     }
@@ -157,6 +163,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
             ),
           ),
           Expanded(
+            // List of alllll activities
             child: StreamBuilder<QuerySnapshot>(
               stream: activitiesRef
                   .where('userId', isEqualTo: user.uid)
@@ -213,6 +220,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                   return _sortAscending ? comparison : -comparison;
                 });
 
+                // Filter activities based on search query
                 final filteredActivities = activities
                     .where((activity) =>
                 activity.name.toLowerCase().contains(_searchQuery) ||
@@ -220,7 +228,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                     .toList();
 
                 debugPrint('Docs fetched: ${docs.length}, Filtered: ${filteredActivities.length}');
-
+                // Build list of activity cards
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: filteredActivities.length,
@@ -350,6 +358,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
           ),
         ],
       ),
+      // Floating action button to add new activity
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openActivityDialog(context, activitiesRef),
         backgroundColor: Colors.deepPurple,
@@ -360,6 +369,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
     );
   }
 
+// Function to open dialog for adding or editing an activity
   void _openActivityDialog(BuildContext context, CollectionReference ref, {Activity? activity}) {
     final user = FirebaseAuth.instance.currentUser!;
     final nameController = TextEditingController(text: activity?.name);
