@@ -109,14 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
-
-
-
-
-
-
-
   Widget _buildCustomProductDialog() {
     _customProdNameCtrl.clear();
     _customProdSugarCtrl.clear();
@@ -325,10 +317,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Weekly Sugar Trend", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                    const Text(
+                      "Weekly Sugar Trend",
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                    ),
                     const SizedBox(height: 20),
                     SizedBox(
-                      height: 200,
+                      height: 240,
                       child: StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection('meals')
@@ -336,55 +331,167 @@ class _HomeScreenState extends State<HomeScreen> {
                             .snapshots(),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
                           final spots = _getWeeklySugarData(snapshot);
                           final maxY = _getMaxSugarValue(spots);
-                          return LineChart(
-                            LineChartData(
-                              gridData: FlGridData(
-                                drawHorizontalLine: true,
-                                horizontalInterval: maxY / 5,
-                              ),
-                              titlesData: FlTitlesData(
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 40,
-                                    getTitlesWidget: (value, meta) => Text(
-                                      '${value.toInt()} g',
-                                      style: const TextStyle(fontSize: 12),
+
+                          double avgSugar = 0;
+                          if (spots.isNotEmpty) {
+                            double sum = spots.fold(0.0, (sum, spot) => sum + spot.y);
+                            avgSugar = sum / spots.length;
+                          }
+
+                          return Column(
+                            children: [
+                              Expanded(
+                                child: LineChart(
+                                  LineChartData(
+                                    gridData: FlGridData(
+                                      drawHorizontalLine: true,
+                                      horizontalInterval: (maxY / 5).clamp(1, double.infinity),
+                                      drawVerticalLine: false,
+                                      getDrawingHorizontalLine: (value) => FlLine(
+                                        color: Colors.grey.withOpacity(0.3),
+                                        strokeWidth: 1,
+                                      ),
+                                    ),
+                                    titlesData: FlTitlesData(
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 40,
+                                          getTitlesWidget: (value, meta) => Text(
+                                            '${value.toInt()} g',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                                            if (value.toInt() >= 0 && value.toInt() < days.length) {
+                                              return Padding(
+                                                padding: const EdgeInsets.only(top: 8.0),
+                                                child: Text(
+                                                  days[value.toInt()],
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.deepPurple,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ),
+                                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    ),
+                                    borderData: FlBorderData(
+                                      show: true,
+                                      border: Border(
+                                        bottom: BorderSide(color: Colors.grey.withOpacity(0.4), width: 1),
+                                        left: BorderSide(color: Colors.grey.withOpacity(0.4), width: 1),
+                                      ),
+                                    ),
+                                    lineBarsData: [
+                                      // Average Line
+                                      LineChartBarData(
+                                        spots: [
+                                          FlSpot(0, avgSugar),
+                                          FlSpot(6, avgSugar),
+                                        ],
+                                        isCurved: false,
+                                        color: Colors.orange.withOpacity(0.7),
+                                        barWidth: 1.5,
+                                        dotData: const FlDotData(show: false),
+                                        dashArray: [5, 5],
+                                      ),
+                                      // Main Sugar Line
+                                      LineChartBarData(
+                                        spots: spots,
+                                        isCurved: true,
+                                        curveSmoothness: 0.3,
+                                        color: Colors.deepPurple,
+                                        barWidth: 3.5,
+                                        isStrokeCapRound: true,
+                                        belowBarData: BarAreaData(
+                                          show: true,
+                                          color: Colors.deepPurple.withOpacity(0.1),
+                                        ),
+                                        dotData: FlDotData(
+                                          show: true,
+                                          getDotPainter: (spot, percent, barData, index) {
+                                            return FlDotCirclePainter(
+                                              radius: 5,
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                              strokeColor: Colors.deepPurple,
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                    minY: 0,
+                                    maxY: maxY,
+                                    lineTouchData: LineTouchData(
+                                      enabled: true,
+                                      touchTooltipData: LineTouchTooltipData(
+                                        getTooltipItems: (touchedSpots) {
+                                          return touchedSpots.map((touchedSpot) {
+                                            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                                            final dayIndex = touchedSpot.x.toInt();
+                                            final dayName = dayIndex >= 0 && dayIndex < days.length ? days[dayIndex] : '';
+                                            return LineTooltipItem(
+                                              '$dayName\n${touchedSpot.y.toStringAsFixed(1)} g',
+                                              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                            );
+                                          }).toList();
+                                        },
+                                      ),
+                                      handleBuiltInTouches: true,
                                     ),
                                   ),
                                 ),
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    getTitlesWidget: (value, meta) {
-                                      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                                      return Text(days[value.toInt()], style: const TextStyle(fontSize: 12));
-                                    },
-                                  ),
-                                ),
-                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                               ),
-                              borderData: FlBorderData(show: false),
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: spots,
-                                  isCurved: true,
-                                  curveSmoothness: 0.5, // Increased smoothness
-                                  color: Colors.deepPurple,
-                                  barWidth: 3,
-                                  belowBarData: BarAreaData(
-                                    show: true,
-                                    color: Colors.deepPurple.withOpacity(0.1),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.deepPurple,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                  dotData: const FlDotData(show: true),
-                                ),
-                              ],
-                              minY: 0,
-                              maxY: maxY,
-                            ),
+                                  const SizedBox(width: 4),
+                                  const Text('Daily sugar', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 16),
+                                  Container(
+                                    width: 12,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.7),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Avg: ${avgSugar.toStringAsFixed(1)} g',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ],
                           );
                         },
                       ),
@@ -393,6 +500,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
+
 
             const SizedBox(height: 20),
 
