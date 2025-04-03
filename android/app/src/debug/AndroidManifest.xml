@@ -1,0 +1,16 @@
+<!-- android/app/src/debug/AndroidManifest.xml -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- *Extra* or *different* permission only used in debug. -->
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <uses-permission android:name="android.permission.CAMERA"/>
+
+    <!-- If you needed to override or add a meta-data entry for debug, you might do: -->
+    <application>
+        <meta-data android:name="com.example.DEBUG_LOGGING_ENABLED"
+            android:value="true"/>
+    </application>
+
+</manifest>

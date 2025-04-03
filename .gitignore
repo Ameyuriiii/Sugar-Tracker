@@ -1,0 +1,24 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub/
+build/
+flutter_*.png
+generated_plugin_registrant.dart
+
+# IntelliJ related
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# VS Code related
+.vscode/
+
+# macOS related
+.DS_Store
+
+# Others
+*.log
+*.tmp
+*.swp

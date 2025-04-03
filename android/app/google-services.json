@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "581226119738",
+    "firebase_url": "https://sugar-tracker-app-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "sugar-tracker-app",
+    "storage_bucket": "sugar-tracker-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:581226119738:android:fa05dffac11cab62a5ab03",
+        "android_client_info": {
+          "package_name": "com.example.sugar_tracker_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "581226119738-qb9dbckmbl6nnaa1ih76rufl6em4veo5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.sugar_tracker_app",
+            "certificate_hash": "9f32287bfd8c0664a82647e43b51f6e459f4ee17"
+          }
+        },
+        {
+          "client_id": "581226119738-u48aclpsuliotujq5ehhadghl0fc91r3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAbl8OHMv6lmWspd4cE5PJ528GsSKRNSc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "581226119738-u48aclpsuliotujq5ehhadghl0fc91r3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "581226119738-pqgcdgfm6cvl1ncr2avpi0mgmr73krje.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.sugarTrackerApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
