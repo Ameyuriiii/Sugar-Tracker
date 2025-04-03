@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # sugar_tracker_app
 
 A new Flutter project.
@@ -14,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# Sugar-Tracker
+>>>>>>> 3c95591619793a056a767c1753dd626c7d6ebdc5

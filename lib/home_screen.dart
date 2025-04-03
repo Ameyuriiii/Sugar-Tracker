@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:fl_chart/fl_chart.dart';
+
 import 'activity_manager_page.dart';
 import 'login_page.dart';
 import 'profile_page.dart';
@@ -51,64 +52,91 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchResults = [];
     });
 
-    final url = Uri.parse(
-      'https://world.openfoodfacts.net/api/v2/search?'
-          'search_terms=${Uri.encodeQueryComponent(query)}&'
-          'fields=product_name,nutriments&'
-          'sort_by=unique_scans_n&'
-          'page_size=20',
-    );
+    final url =
+        'https://world.openfoodfacts.net/api/v2/search?search_terms=$query&fields=product_name,nutriments&sort_by=unique_scans_n&page_size=20';
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> products = data['products'] ?? [];
+        final List<dynamic> products = data['products'];
 
         setState(() {
           _searchResults = products
               .map((p) => {
             'product_name': p['product_name'] ?? 'Unknown',
             'nutriments': {
-              'sugars_100g': p['nutriments'] != null
-                  ? (p['nutriments']['sugars_100g']?.toString() ?? '0')
-                  : '0',
+              'sugars_100g': p['nutriments']?['sugars_100g']?.toString() ?? '0'
             },
           })
               .where((p) => p['product_name'] != 'Unknown')
               .toList();
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('API error. Please try again.')),
-        );
+        debugPrint("API error: ${response.statusCode}");
       }
     } catch (e) {
-      debugPrint('Search error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to search products. Check your connection.')),
-      );
+      debugPrint("Search error: $e");
     }
   }
 
+
+
+
+
   void _addSearchProduct(Map<String, dynamic> product) {
     final productName = product['product_name'] ?? 'No name';
-    final sugarNum = double.tryParse(product['nutriments']?['sugars_100g'] ?? '0') ?? 0.0;
+    final sugarNum = (product['nutriments']?['sugars_100g'] as num?)?.toDouble() ?? 0.0;
     setState(() {
       _productsInMeal.add({'name': productName, 'sugar': sugarNum});
     });
   }
 
   Widget _buildProductSearchDialog() {
+    _searchResults.clear();
     _productSearchController.clear();
+
     return StatefulBuilder(
-      builder: (context, setDialogState) {
+      builder: (context, setState) {
+        Future<void> _search(String query) async {
+          if (query.trim().isEmpty) return;
+
+          final url = Uri.parse(
+            'https://world.openfoodfacts.net/api/v2/search?'
+                'search_terms=$query&fields=product_name,nutriments&sort_by=unique_scans_n&page_size=20',
+          );
+
+          try {
+            final response = await http.get(url);
+            if (response.statusCode == 200) {
+              final data = jsonDecode(response.body);
+              final products = data['products'] as List<dynamic>;
+
+              setState(() {
+                _searchResults = products
+                    .where((p) =>
+                p['product_name'] != null &&
+                    p['product_name'].toString().toLowerCase().contains(query.toLowerCase()) &&
+                    p['nutriments']?['sugars_100g'] != null)
+                    .map((p) => {
+                  'product_name': p['product_name'],
+                  'nutriments': {
+                    'sugars_100g': p['nutriments']['sugars_100g'].toString(),
+                  }
+                })
+                    .toList();
+              });
+            } else {
+              setState(() => _searchResults = []);
+            }
+          } catch (e) {
+            setState(() => _searchResults = []);
+          }
+        }
+
+
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            "Search Product",
-            style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
-          ),
+          title: const Text("Search Product"),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -118,29 +146,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   controller: _productSearchController,
                   decoration: InputDecoration(
                     hintText: "Enter product name",
-                    prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.deepPurple[50],
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _productSearchController.clear();
-                        setDialogState(() => _searchResults = []);
-                      },
+                      icon: const Icon(Icons.search),
+                      onPressed: () =>
+                          _search(_productSearchController.text.trim()),
                     ),
                   ),
-                  onSubmitted: (value) {
-                    _searchProductAPI(value);
-                    setDialogState(() {});
-                  },
+                  onSubmitted: _search,
                 ),
                 const SizedBox(height: 10),
                 if (_searchResults.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text("Search for a product or check your spelling."),
-                  )
+                  const Text("No results yet.")
                 else
                   SizedBox(
                     height: 300,
@@ -149,14 +165,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final product = _searchResults[index];
                         final name = product['product_name'] ?? 'No name';
-                        final sugar = product['nutriments']?['sugars_100g'] ?? '0';
+                        final sugar =
+                            product['nutriments']?['sugars_100g'] ?? '0';
 
                         return ListTile(
                           title: Text(name),
                           subtitle: Text("Sugar: $sugar g/100g"),
-                          trailing: const Icon(Icons.add, color: Colors.deepPurple),
                           onTap: () {
-                            _addSearchProduct(product);
+                            _addSearchProduct({
+                              'product_name': name,
+                              'nutriments': {'sugars_100g': sugar}
+                            });
                             Navigator.pop(context);
                           },
                         );
@@ -169,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Close", style: TextStyle(color: Colors.grey)),
+              child: const Text("Close"),
             ),
           ],
         );
@@ -177,36 +196,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
+
   Widget _buildCustomProductDialog() {
     _customProdNameCtrl.clear();
     _customProdSugarCtrl.clear();
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        "Custom Product",
-        style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
-      ),
+      title: const Text("Custom Product"),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _customProdNameCtrl,
-            decoration: InputDecoration(
-              labelText: "Name",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: Colors.deepPurple[50],
-            ),
+            decoration: const InputDecoration(labelText: "Name"),
           ),
-          const SizedBox(height: 12),
           TextField(
             controller: _customProdSugarCtrl,
-            decoration: InputDecoration(
-              labelText: "Sugar (g)",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: Colors.deepPurple[50],
-            ),
+            decoration: const InputDecoration(labelText: "Sugar (g)"),
             keyboardType: TextInputType.number,
           ),
         ],
@@ -214,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          child: const Text("Cancel"),
         ),
         ElevatedButton(
           onPressed: () {
@@ -224,17 +230,9 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 _productsInMeal.add({'name': name, 'sugar': sugar});
               });
-              Navigator.pop(context);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please enter a valid name and sugar value.')),
-              );
             }
+            Navigator.pop(context);
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-          ),
           child: const Text("Add"),
         ),
       ],
@@ -245,38 +243,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveMeal() async {
     final mealName = _mealNameController.text.trim();
-    if (mealName.isEmpty && _productsInMeal.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add a meal name or products.')),
-      );
-      return;
-    }
+    if (mealName.isEmpty && _productsInMeal.isEmpty) return;
 
-    try {
-      await FirebaseFirestore.instance.collection('meals').add({
-        'userId': user!.uid,
-        'name': mealName.isNotEmpty ? mealName : '(Unnamed Meal)',
-        'type': _mealType,
-        'timestamp': DateTime.now().toUtc(),
-        'products': _productsInMeal,
-        'sugar': _sumMealSugar,
-      });
+    await FirebaseFirestore.instance.collection('meals').add({
+      'userId': user!.uid,
+      'name': mealName.isNotEmpty ? mealName : '(Unnamed Meal)',
+      'type': _mealType,
+      'timestamp': DateTime.now(),
+      'products': _productsInMeal,
+      'sugar': _sumMealSugar,
+    });
 
-      setState(() {
-        _mealNameController.clear();
-        _productsInMeal.clear();
-        _mealType = 'breakfast';
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Meal saved successfully!')),
-      );
-    } catch (e) {
-      debugPrint('Save meal error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save meal. Please try again.')),
-      );
-    }
+    setState(() {
+      _mealNameController.clear();
+      _productsInMeal.clear();
+      _mealType = 'breakfast';
+    });
   }
 
   Future<void> _toggleActivityDone(String docId, bool currentVal) async {
@@ -341,10 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Row(
           children: [
-            Image.asset('assets/logo.png', height: 70, fit: BoxFit.contain),
-            const SizedBox(width: 8),
-            const Text('Sugar Tracker',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+            Image.asset('assets/logo.png', height: 100, fit: BoxFit.contain),
+            const SizedBox(width: 1),
+            const Text('Sugar Tracker', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
           ],
         ),
       ),
@@ -354,20 +335,14 @@ class _HomeScreenState extends State<HomeScreen> {
             UserAccountsDrawerHeader(
               accountName: const Text('User', style: TextStyle(color: Colors.white)),
               accountEmail: Text(user?.email ?? '', style: const TextStyle(color: Colors.white70)),
-              currentAccountPicture: const CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 30, color: Colors.deepPurple)),
+              currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person, size: 30, color: Colors.deepPurple)),
               decoration: BoxDecoration(color: Colors.deepPurple[700]),
             ),
             _buildDrawerItem(Icons.home, 'Home', () => Navigator.pop(context)),
-            _buildDrawerItem(Icons.person, 'Profile',
-                    () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(userId: user!.uid)))),
-            _buildDrawerItem(Icons.qr_code, 'Scan Product',
-                    () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanProductScreen()))),
-            _buildDrawerItem(Icons.search, 'Sugar Lookup',
-                    () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SugarProductLookup()))),
-            _buildDrawerItem(Icons.list, 'Activity Manager',
-                    () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityManagerPage()))),
+            _buildDrawerItem(Icons.person, 'Profile', () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(userId: user!.uid)))),
+            _buildDrawerItem(Icons.qr_code, 'Scan Product', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanProductScreen()))),
+            _buildDrawerItem(Icons.search, 'Sugar Lookup', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SugarProductLookup()))),
+            _buildDrawerItem(Icons.list, 'Activity Manager', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityManagerPage()))),
             _buildDrawerItem(Icons.logout, 'Logout', () async {
               await FirebaseAuth.instance.signOut();
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
@@ -428,8 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Weekly Sugar Trend",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                    const Text("Weekly Sugar Trend", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
                     const SizedBox(height: 20),
                     SizedBox(
                       height: 200,
@@ -476,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 LineChartBarData(
                                   spots: spots,
                                   isCurved: true,
-                                  curveSmoothness: 0.5,
+                                  curveSmoothness: 0.5, // Increased smoothness
                                   color: Colors.deepPurple,
                                   barWidth: 3,
                                   belowBarData: BarAreaData(
@@ -508,16 +482,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Add Meal",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                    const Text("Add Meal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _mealNameController,
                       decoration: InputDecoration(
                         labelText: 'Meal Name (optional)',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.deepPurple[50],
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -529,8 +500,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onChanged: (val) => setState(() => _mealType = val!),
                       decoration: InputDecoration(
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.deepPurple[50],
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -551,8 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       )),
                     const SizedBox(height: 12),
-                    Text("Total sugar: ${_sumMealSugar.toStringAsFixed(1)} g",
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text("Total sugar: ${_sumMealSugar.toStringAsFixed(1)} g", style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -645,8 +613,7 @@ class _HomeScreenState extends State<HomeScreen> {
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: ExpansionTile(
-                title: const Text("Meal History",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                title: const Text("Meal History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
                 children: [
                   StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
@@ -657,9 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const CircularProgressIndicator();
                       final docs = snapshot.data!.docs;
-                      if (docs.isEmpty) {
-                        return const Padding(padding: EdgeInsets.all(16), child: Text("No meals logged yet."));
-                      }
+                      if (docs.isEmpty) return const Padding(padding: EdgeInsets.all(16), child: Text("No meals logged yet."));
                       return ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -696,5 +661,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 extension StringExtension on String {
-  String capitalize() => "${this[0].toUpperCase()}${substring(1)}";
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
 }
