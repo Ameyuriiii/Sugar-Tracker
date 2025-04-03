@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!snapshot.hasData) return [];
     final docs = snapshot.data!.docs;
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final startOfWeek = DateTime(now.year, now.month, now.day - now.weekday + 1);
     Map<int, double> dailyTotals = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0};
 
     for (var doc in docs) {
@@ -199,9 +199,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (data['userId'] != user!.uid) continue;
       final sugarVal = (data['sugar'] as num?)?.toDouble() ?? 0.0;
       final ts = (data['timestamp'] as Timestamp).toDate();
-      final diff = ts.difference(startOfWeek).inDays;
-      if (diff >= 0 && diff < 7) {
-        dailyTotals[diff] = (dailyTotals[diff] ?? 0) + sugarVal;
+
+      final mealDate = DateTime(ts.year, ts.month, ts.day);
+      final dayIndex = mealDate.difference(startOfWeek).inDays;
+
+      if (dayIndex >= 0 && dayIndex < 7) {
+        dailyTotals[dayIndex] = (dailyTotals[dayIndex] ?? 0) + sugarVal;
       }
     }
 
