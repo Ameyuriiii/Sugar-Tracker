@@ -1,3 +1,9 @@
+/// A popup widget that uses the device camera to scan a barcode,
+/// fetches product data (name and sugar content) from the Open Food Facts API,
+/// and returns the result to the calling widget.
+///
+/// If scanning fails or the product is not found, the popup shows an error
+/// and allows the user to close the scanner.
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
@@ -10,11 +16,13 @@ class ScanPopup extends StatefulWidget {
   State<ScanPopup> createState() => _ScanPopupState();
 }
 
+
 class _ScanPopupState extends State<ScanPopup> {
   final MobileScannerController _controller = MobileScannerController();
   bool _isLoading = false;
   bool _hasScanned = false;
 
+  
   Future<void> _fetchProductData(String barcode) async {
     setState(() => _isLoading = true);
 

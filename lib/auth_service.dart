@@ -1,8 +1,13 @@
+// AuthService handles user authentication logic using Firebase Auth.
+// It provides methods for logging in and registering users securely.
+
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  /// Logs in a user with the provided [email] and [password].
+  /// Returns `true` if login is successful, otherwise `false`.
   Future<bool> loginUser(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
@@ -13,19 +18,14 @@ class AuthService {
     }
   }
 
+  /// Registers a new user with [name], [email], and [password].
+  /// Returns `true` if registration is successful, otherwise `false`.
   Future<bool> registerUser(String name, String email, String password) async {
     try {
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-
-      // You can optionally save additional user information (e.g., name) to Firestore here
-      // Example:
-      // await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-      //   'name': name,
-      //   'email': email,
-      // });
 
       return true;
     } on FirebaseAuthException catch (e) {
