@@ -16,7 +16,13 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
   String _error = '';
 
   Future<void> _searchProducts(String query) async {
-    if (query.trim().isEmpty) return;
+    if (query.trim().isEmpty) {
+      setState(() {
+        _results = [];
+        _error = 'Please enter a product name.';
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -24,27 +30,57 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
       _error = '';
     });
 
-    final url =
-        'https://world.openfoodfacts.net/api/v2/search?search_terms=$query&fields=product_name,nutriments&sort_by=unique_scans_n&page_size=20';
+    final url = Uri.https(
+      'world.openfoodfacts.org',
+      '/cgi/search.pl',
+      {
+        'search_terms': query,
+        'search_simple': '1',
+        'action': 'process',
+        'json': '1',
+        'fields': 'product_name,nutriments',
+        'page_size': '30',
+      },
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final products = data['products'] as List<dynamic>;
+        final products = data['products'] as List<dynamic>? ?? [];
 
-        final List<Map<String, String>> mapped = products.map((p) {
-          final name = p['product_name']?.toString() ?? 'Unknown';
+        final queryLower = query.toLowerCase();
+        final mapped = products
+            .map((p) {
+          final name = p['product_name']?.toString() ?? '';
           final sugar = p['nutriments']?['sugars_100g']?.toString() ?? '0';
           return {'name': name, 'sugar': sugar};
-        }).where((e) => e['name'] != 'Unknown').toList();
+        })
+            .where((e) =>
+        e['name']!.isNotEmpty &&
+            e['name']!.toLowerCase().contains(queryLower))
+            .toList();
 
-        setState(() => _results = mapped);
+        setState(() {
+          _results = mapped;
+          _error = mapped.isEmpty ? 'No matching products found.' : '';
+        });
       } else {
-        setState(() => _error = 'API error: ${response.statusCode}');
+        setState(() {
+          _error = 'API error: ${response.statusCode}';
+        });
       }
     } catch (e) {
-      setState(() => _error = 'Error: $e');
+      debugPrint('Search error: $e');
+      setState(() {
+        _error = 'Failed to search. Please check your internet connection.';
+      });
     } finally {
       setState(() => _isLoading = false);
     }
@@ -53,46 +89,79 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Search Products"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _searchController,
-            onSubmitted: _searchProducts,
-            textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              hintText: "Enter product name",
-              suffixIcon: Icon(Icons.search),
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (_isLoading) const CircularProgressIndicator(),
-          if (_error.isNotEmpty) Text(_error, style: const TextStyle(color: Colors.red)),
-          if (!_isLoading && _results.isNotEmpty)
-            SizedBox(
-              height: 300,
-              width: double.maxFinite,
-              child: ListView.builder(
-                itemCount: _results.length,
-                itemBuilder: (_, index) {
-                  final item = _results[index];
-                  return ListTile(
-                    title: Text(item['name'] ?? ''),
-                    subtitle: Text("Sugar: ${item['sugar']} g"),
-                    onTap: () {
-                      Navigator.pop(context, item); // return name + sugar
-                    },
-                  );
-                },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        "Search Products",
+        style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: "Enter product name",
+                prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.deepPurple[50],
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _results = [];
+                      _error = '';
+                    });
+                  },
+                ),
               ),
+              onSubmitted: _searchProducts,
             ),
-        ],
+            const SizedBox(height: 10),
+            if (_isLoading)
+              const CircularProgressIndicator()
+            else if (_error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(_error, style: const TextStyle(color: Colors.red)),
+              )
+            else if (_results.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text("Search for a product to see results."),
+                )
+              else
+                SizedBox(
+                  height: 300,
+                  child: ListView.builder(
+                    itemCount: _results.length,
+                    itemBuilder: (_, index) {
+                      final item = _results[index];
+                      final name = item['name'] ?? '';
+                      final sugar = item['sugar'] ?? '0';
+                      return ListTile(
+                        title: Text(name),
+                        subtitle: Text("Sugar: $sugar g/100g"),
+                        trailing: const Icon(Icons.add, color: Colors.deepPurple),
+                        onTap: () => Navigator.pop(context, {
+                          'name': name,
+                          'sugar': sugar,
+                        }),
+                      );
+                    },
+                  ),
+                ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, null),
-          child: const Text("Cancel"),
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
         ),
       ],
     );

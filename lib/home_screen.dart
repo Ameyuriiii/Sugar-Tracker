@@ -12,6 +12,7 @@ import 'profile_page.dart';
 import 'scan_popup.dart';
 import 'scan_product_screen.dart';
 import 'sugar_product_lookup.dart';
+import 'search_product_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,44 +46,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _searchProductAPI(String query) async {
+  Future<void> _search(String query) async {
     if (query.trim().isEmpty) return;
 
-    setState(() {
-      _searchResults = [];
-    });
-
-    final url =
-        'https://world.openfoodfacts.net/api/v2/search?search_terms=$query&fields=product_name,nutriments&sort_by=unique_scans_n&page_size=20';
+    final url = Uri.parse(
+      'https://world.openfoodfacts.net/api/v2/search?'
+          'search_terms=$query&fields=product_name,nutriments&sort_by=unique_scans_n&page_size=20',
+    );
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> products = data['products'];
+        final products = data['products'] as List<dynamic>;
 
         setState(() {
           _searchResults = products
+              .where((p) =>
+          p['product_name'] != null &&
+              p['product_name']
+                  .toString()
+                  .toLowerCase()
+                  .contains(query.toLowerCase()) &&
+              p['nutriments']?['sugars_100g'] != null)
               .map((p) => {
-            'product_name': p['product_name'] ?? 'Unknown',
+            'product_name': p['product_name'],
             'nutriments': {
-              'sugars_100g': p['nutriments']?['sugars_100g']?.toString() ?? '0'
-            },
+              'sugars_100g': p['nutriments']['sugars_100g'].toString(),
+            }
           })
-              .where((p) => p['product_name'] != 'Unknown')
               .toList();
         });
       } else {
-        debugPrint("API error: ${response.statusCode}");
+        setState(() => _searchResults = []);
       }
     } catch (e) {
-      debugPrint("Search error: $e");
+      setState(() => _searchResults = []);
     }
   }
-
-
-
-
 
   void _addSearchProduct(Map<String, dynamic> product) {
     final productName = product['product_name'] ?? 'No name';
@@ -92,109 +93,27 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _buildProductSearchDialog() {
-    _searchResults.clear();
-    _productSearchController.clear();
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        Future<void> _search(String query) async {
-          if (query.trim().isEmpty) return;
-
-          final url = Uri.parse(
-            'https://world.openfoodfacts.net/api/v2/search?'
-                'search_terms=$query&fields=product_name,nutriments&sort_by=unique_scans_n&page_size=20',
-          );
-
-          try {
-            final response = await http.get(url);
-            if (response.statusCode == 200) {
-              final data = jsonDecode(response.body);
-              final products = data['products'] as List<dynamic>;
-
-              setState(() {
-                _searchResults = products
-                    .where((p) =>
-                p['product_name'] != null &&
-                    p['product_name'].toString().toLowerCase().contains(query.toLowerCase()) &&
-                    p['nutriments']?['sugars_100g'] != null)
-                    .map((p) => {
-                  'product_name': p['product_name'],
-                  'nutriments': {
-                    'sugars_100g': p['nutriments']['sugars_100g'].toString(),
-                  }
-                })
-                    .toList();
-              });
-            } else {
-              setState(() => _searchResults = []);
-            }
-          } catch (e) {
-            setState(() => _searchResults = []);
-          }
-        }
-
-
-        return AlertDialog(
-          title: const Text("Search Product"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _productSearchController,
-                  decoration: InputDecoration(
-                    hintText: "Enter product name",
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: () =>
-                          _search(_productSearchController.text.trim()),
-                    ),
-                  ),
-                  onSubmitted: _search,
-                ),
-                const SizedBox(height: 10),
-                if (_searchResults.isEmpty)
-                  const Text("No results yet.")
-                else
-                  SizedBox(
-                    height: 300,
-                    child: ListView.builder(
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final product = _searchResults[index];
-                        final name = product['product_name'] ?? 'No name';
-                        final sugar =
-                            product['nutriments']?['sugars_100g'] ?? '0';
-
-                        return ListTile(
-                          title: Text(name),
-                          subtitle: Text("Sugar: $sugar g/100g"),
-                          onTap: () {
-                            _addSearchProduct({
-                              'product_name': name,
-                              'nutriments': {'sugars_100g': sugar}
-                            });
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            ),
-          ],
-        );
-      },
+  Future<void> _openProductSearchDialog() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => const SearchProductDialog(),
     );
+
+    if (result != null) {
+      setState(() {
+        _productsInMeal.add({
+          'name': result['name'] ?? 'Unknown',
+          'sugar': double.tryParse(result['sugar'] ?? '0') ?? 0.0,
+        });
+      });
+    }
   }
+
+
+
+
+
+
 
 
 
@@ -532,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
                         ),
                         ElevatedButton.icon(
-                          onPressed: () => showDialog(context: context, builder: (_) => _buildProductSearchDialog()),
+                          onPressed: _openProductSearchDialog,
                           icon: const Icon(Icons.search, color: Colors.white),
                           label: const Text("Search", style: TextStyle(color: Colors.white)),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
