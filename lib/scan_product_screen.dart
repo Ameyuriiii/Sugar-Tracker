@@ -1,3 +1,8 @@
+/// A screen that uses the device's camera to scan a barcode using `mobile_scanner`,
+/// fetches basic product information from the Open Food Facts API (name + Nutri-Score),
+/// and displays the results. A FloatingActionButton allows the user to reset and scan again.
+/// tried making it with flutter camera, didnt work
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
@@ -22,15 +27,16 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = MobileScannerController();
+    _controller = MobileScannerController();// Initialize camera controller
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller?.dispose(); // Dispose controller when screen is destroyed
     super.dispose();
   }
 
+  /// Fetch product info (name & nutrition grade) from Open Food Facts API
   Future<void> _fetchProductData(String barcode) async {
     setState(() {
       _isLoading = true;
@@ -64,6 +70,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
     }
   }
 
+  /// Called when a barcode is detected by the scanner
   void _onDetect(BarcodeCapture capture) {
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
@@ -110,13 +117,15 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
             ),
           ),
 
-          // Result & Feedback
+          // Result anhd Feedback
           const SizedBox(height: 12),
+          // Show loading spinner
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.all(16),
               child: CircularProgressIndicator(),
             )
+          // Show error message if fetch failed
           else if (_error.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(16),
@@ -126,6 +135,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
                 textAlign: TextAlign.center,
               ),
             )
+          // Default message when no barcode is scanned yet
           else if (_scannedBarcode.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16),
@@ -135,6 +145,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
                   textAlign: TextAlign.center,
                 ),
               )
+            // Show fetched product details
             else
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -176,11 +187,11 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
                   ),
                 ),
               ),
-          const SizedBox(height: 80), // space for FAB
+          const SizedBox(height: 80),
         ],
       ),
 
-      // Clear/Refresh FAB
+// FloatingActionButton to reset and re-enable scanning
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

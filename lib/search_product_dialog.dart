@@ -1,3 +1,6 @@
+/// A dialog that allows users to search for food products by name using
+/// the Open Food Facts API. Displays a list of matching products with their
+/// sugar content per 100g. Upon selection, returns the product info to the caller.
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +18,7 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
   bool _isLoading = false;
   String _error = '';
 
+  /// Calls the Open Food Facts API with a query and processes results.
   Future<void> _searchProducts(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -30,6 +34,7 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
       _error = '';
     });
 
+    // Build URL with query params
     final url = Uri.https(
       'world.openfoodfacts.org',
       '/cgi/search.pl',
@@ -100,6 +105,7 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              // Search bar
               controller: _searchController,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
@@ -122,18 +128,22 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
               onSubmitted: _searchProducts,
             ),
             const SizedBox(height: 10),
+            // Show loading spinner
             if (_isLoading)
               const CircularProgressIndicator()
+            // Show error message
             else if (_error.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(_error, style: const TextStyle(color: Colors.red)),
               )
+            // Default prompt
             else if (_results.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: Text("Search for a product to see results."),
                 )
+              // Search result list
               else
                 SizedBox(
                   height: 300,
@@ -158,6 +168,7 @@ class _SearchProductDialogState extends State<SearchProductDialog> {
           ],
         ),
       ),
+      // Cancel button
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),

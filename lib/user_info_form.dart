@@ -1,3 +1,6 @@
+/// A screen that collects additional user information (name, height, and weight)
+/// right after registration. The data is stored in Firestore under the user's UID.
+/// After saving, the user is navigated to the HomeScreen.
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
@@ -42,6 +45,7 @@ class _AdditionalInfoPageState extends State<AdditionalInfoPage> {
         'created_at': FieldValue.serverTimestamp(),
       });
 
+      // Navigate to HomeScreen on success
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -101,6 +105,7 @@ class _AdditionalInfoPageState extends State<AdditionalInfoPage> {
                   ),
                 ),
                 const SizedBox(height: 15),
+                //height input
                 TextField(
                   controller: _heightController,
                   decoration: const InputDecoration(
@@ -111,6 +116,7 @@ class _AdditionalInfoPageState extends State<AdditionalInfoPage> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 15),
+                // weight input
                 TextField(
                   controller: _weightController,
                   decoration: const InputDecoration(
@@ -122,6 +128,7 @@ class _AdditionalInfoPageState extends State<AdditionalInfoPage> {
                 ),
                 const SizedBox(height: 20),
 
+                // Show error message if present
                 if (_errorMessage.isNotEmpty)
                   Text(
                     _errorMessage,
@@ -129,6 +136,7 @@ class _AdditionalInfoPageState extends State<AdditionalInfoPage> {
                   ),
 
                 const SizedBox(height: 20),
+                // Submit button
                 ElevatedButton(
                   onPressed: _isSaving ? null : _saveInfo,
                   style: ElevatedButton.styleFrom(

@@ -1,3 +1,9 @@
+/// ProfilePage displays and allows editing of the current user's profile data.
+/// Users can view and update their name, height, and weight,
+/// and optionally upload a profile picture in the future.
+/// Data is fetched from and saved to Firebase Firestore.
+/// so yeah, it needs some further development, for now just a pag to be a page
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -20,6 +26,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String _errorMessage = '';
   String? _profileImageUrl; // For future image support
 
+  // Fetches user data from Firestore when the screen loads
   Future<void> _loadUserData() async {
     try {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
@@ -49,6 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  /// Updates the user's profile data in Firestore
   Future<void> _updateUserData() async {
     if (_nameController.text.trim().isEmpty ||
         _heightController.text.trim().isEmpty ||
@@ -135,7 +143,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Profile Picture Placeholder
+                // Profile Picture
                 Center(
                   child: CircleAvatar(
                     radius: 50,
@@ -156,7 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Center(
                   child: TextButton.icon(
                     onPressed: () {
-                      // Placeholder for future image picker logic
+                      // for future image picker logic
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Image upload coming soon!')),
                       );
@@ -246,6 +254,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  /// Reusable styled text field
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

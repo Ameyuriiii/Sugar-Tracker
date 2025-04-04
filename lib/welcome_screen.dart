@@ -1,6 +1,9 @@
+/// A simple welcome screen with a "Get Started" button.
+/// Navigates to the LoginPage when the button is pressed.
+
 import 'package:flutter/material.dart';
 import 'login_page.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // For heart icon
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -8,6 +11,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // screen container with padding and gradient background
       body: Container(
         padding: const EdgeInsets.all(20.0),
         decoration: const BoxDecoration(
@@ -17,12 +21,13 @@ class WelcomeScreen extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
         ),
+        // Centerinf content vertically and horizontally
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
-                FontAwesomeIcons.heart, // Heart icon ❤️
+                FontAwesomeIcons.heart, // Heart icon
                 size: 80,
                 color: Colors.white,
               ),
@@ -43,6 +48,7 @@ class WelcomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 50),
+              // "Get Started" button that navigates to LoginPage
               ElevatedButton(
                 onPressed: () {
                   Navigator.pushReplacement(
@@ -50,14 +56,15 @@ class WelcomeScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 },
+                // just the style of a button
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   textStyle: const TextStyle(fontSize: 18),
-                  backgroundColor: Colors.white, // Button background
-                  foregroundColor: Colors.purple, // Button text color
-                  elevation: 5, // Optional: add a shadow effect
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.purple,
+                  elevation: 5,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30), // Rounded corners
+                    borderRadius: BorderRadius.circular(30),
                   ),
                 ),
                 child: const Text('Get Started ❤️'),

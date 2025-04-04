@@ -1,3 +1,16 @@
+//This is the main screen of the Sugar Tracker app.
+//user can:
+// View their daily and weekly sugar intake visually using a line chart.
+// Log new meals by scanning barcodes, searching Open Food Facts,
+// or entering custom products manually.
+// Track and mark completion of daily activities.
+// View a history of all logged meals with sugar amounts and timestamps.
+// Navigate to other pages such as profile, product scanner, sugar lookup,
+// activity manager, and logout via a side drawer.
+
+//the screen integrates with Firebase Authentication to identify the user
+// /// and uses Firestore to store and retrieve meal and activity data.
+
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,6 +36,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
+
+  // Controllers for user input
   final TextEditingController _mealNameController = TextEditingController();
   final List<Map<String, dynamic>> _productsInMeal = [];
   String _mealType = 'breakfast';
@@ -32,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _customProdSugarCtrl = TextEditingController();
   bool _showMealHistory = false;
 
+  // Show barcode scanner popup and add scanned product to meal
   Future<void> _scanProduct() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -46,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Search products from Open Food Facts using typed query
   Future<void> _search(String query) async {
     if (query.trim().isEmpty) return;
 
@@ -85,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Add selected product from search to the meal
   void _addSearchProduct(Map<String, dynamic> product) {
     final productName = product['product_name'] ?? 'No name';
     final sugarNum = (product['nutriments']?['sugars_100g'] as num?)?.toDouble() ?? 0.0;
@@ -93,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Opens custom search dialog and returns product selected
   Future<void> _openProductSearchDialog() async {
     final result = await showDialog<Map<String, String>>(
       context: context,
@@ -109,6 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Builds a dialog for manually entering a product
   Widget _buildCustomProductDialog() {
     _customProdNameCtrl.clear();
     _customProdSugarCtrl.clear();
@@ -150,8 +170,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Calculate total sugar for current meal
   double get _sumMealSugar => _productsInMeal.fold(0.0, (sum, p) => sum + (p['sugar'] as double));
 
+  // Save the current meal with all products to Firestore
   Future<void> _saveMeal() async {
     final mealName = _mealNameController.text.trim();
     if (mealName.isEmpty && _productsInMeal.isEmpty) return;
@@ -165,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'sugar': _sumMealSugar,
     });
 
+    // Reset inputs after saving
     setState(() {
       _mealNameController.clear();
       _productsInMeal.clear();
@@ -172,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Toggle activity checkbox (mark as done)
   Future<void> _toggleActivityDone(String docId, bool currentVal) async {
     await FirebaseFirestore.instance
         .collection('activities')
@@ -179,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .update({'isDone': !currentVal});
   }
 
+  // Helper to get weekly sugar data for charting
   List<FlSpot> _getWeeklySugarData(AsyncSnapshot<QuerySnapshot> snapshot) {
     if (!snapshot.hasData) return [];
     final docs = snapshot.data!.docs;
@@ -203,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return dailyTotals.entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
   }
 
+  // Compute today's total sugar
   double _computeTodaySugar(AsyncSnapshot<QuerySnapshot> snapshot) {
     double total = 0;
     if (!snapshot.hasData) return total;
@@ -222,16 +248,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return total;
   }
 
+  // Compute maximum Y-axis value for chart
   double _getMaxSugarValue(List<FlSpot> spots) {
     if (spots.isEmpty) return 50.0; // Default max if no data
     final maxValue = spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-    return (maxValue * 1.2).ceilToDouble(); // Add 20% padding and round up
+    return (maxValue * 1.2).ceilToDouble();
   }
 
+  //design
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
+      // AppBar with logo and app name
       appBar: AppBar(
         backgroundColor: Colors.deepPurple,
         elevation: 0,
@@ -243,15 +272,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+      //Navigation Drawer with app links
       drawer: Drawer(
         child: ListView(
           children: [
+            //User Info Section
             UserAccountsDrawerHeader(
               accountName: const Text('User', style: TextStyle(color: Colors.white)),
               accountEmail: Text(user?.email ?? '', style: const TextStyle(color: Colors.white70)),
               currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person, size: 30, color: Colors.deepPurple)),
               decoration: BoxDecoration(color: Colors.deepPurple[700]),
             ),
+            //Drawer Items
             _buildDrawerItem(Icons.home, 'Home', () => Navigator.pop(context)),
             _buildDrawerItem(Icons.person, 'Profile', () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(userId: user!.uid)))),
             _buildDrawerItem(Icons.qr_code, 'Scan Product', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanProductScreen()))),
@@ -264,11 +296,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+      //Main Scrollable Content
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            //Today's Sugar Summary
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('meals')
@@ -309,6 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 20),
 
+            //card fo chart
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -505,6 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 20),
 
+            //card adding meals
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -596,6 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 20),
 
+            //card for activities
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -655,6 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 20),
 
+            //card for meal history
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -671,6 +709,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (!snapshot.hasData) return const CircularProgressIndicator();
                       final docs = snapshot.data!.docs;
                       if (docs.isEmpty) return const Padding(padding: EdgeInsets.all(16), child: Text("No meals logged yet."));
+
+                      // Render meal history list
                       return ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -679,6 +719,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final data = docs[index].data() as Map<String, dynamic>;
                           final ts = (data['timestamp'] as Timestamp).toDate();
                           final sugarVal = (data['sugar'] as num?)?.toDouble() ?? 0.0;
+
                           return ListTile(
                             title: Text("${data['name']} (${data['type']})"),
                             subtitle: Text("${DateFormat.yMMMd().format(ts)} - $sugarVal g sugar"),
@@ -698,6 +739,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
+  //build!!
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.deepPurple),

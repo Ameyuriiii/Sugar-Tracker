@@ -1,3 +1,8 @@
+/// A simple screen that lets users look up a food product by name using the
+/// Open Food Facts API. It displays the product's name, Nutri-Score, and sugar content
+/// (per 100g) if found. If no match is found, it displays an error message.
+/// same like in home page
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -15,6 +20,7 @@ class _SugarProductLookupState extends State<SugarProductLookup> {
   bool isLoading = false;
   String? errorMessage;
 
+  /// Queries Open Food Facts with the user's search and extracts product info.
   Future<void> _searchProduct() async {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
@@ -32,7 +38,7 @@ class _SugarProductLookupState extends State<SugarProductLookup> {
       final data = jsonDecode(response.body);
       final List products = data['products'] ?? [];
 
-      // Find a match where product name contains the query
+      // Try to find a product whose name contains the query (case-insensitive)
       final match = products.firstWhere(
             (p) => p['product_name']?.toString().toLowerCase().contains(query.toLowerCase()) ?? false,
         orElse: () => null,
@@ -56,6 +62,7 @@ class _SugarProductLookupState extends State<SugarProductLookup> {
     }
   }
 
+  /// Displays product info, an error, or a loading spinner based on state.
   Widget _buildResult() {
     if (isLoading) {
       return const CircularProgressIndicator();
@@ -107,6 +114,7 @@ class _SugarProductLookupState extends State<SugarProductLookup> {
               ),
             ),
             const SizedBox(height: 20),
+            // Result / Error / Loading
             _buildResult(),
           ],
         ),

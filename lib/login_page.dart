@@ -1,7 +1,9 @@
+/// LoginPage allows users to sign in with email/password or Google account.
+/// On successful login, it navigates to the HomeScreen.
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
 import 'home_screen.dart';
 import 'register_page.dart';
 
@@ -13,11 +15,16 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Text controllers for email & password fields
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // Error message to display under form
   String _errorMessage = '';
 
+  // Attempts to sign in using email and password
   Future<void> _loginWithEmail() async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -25,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
 
+      // Navigate to HomeScreen on successful login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -35,6 +43,7 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
   }
+
 
   Future<void> _signInWithGoogle() async {
     try {

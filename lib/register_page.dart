@@ -1,3 +1,6 @@
+/// Register Page allows users to sign up for a new account using email and password.
+/// It validates input fields, creates a user in Firebase Auth, and navigates to
+/// the AdditionalInfoPage to collect more profile information (which is not necessary)
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'user_info_form.dart';
@@ -10,16 +13,21 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // Controllers for input fields
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
   String _errorMessage = '';
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  /// Handles registration logic with validation and Firebase Auth
   Future<void> _register() async {
+    // Basic validation
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty ||
         _confirmPasswordController.text.trim().isEmpty) {
@@ -48,18 +56,21 @@ class _RegisterPageState extends State<RegisterPage> {
       _errorMessage = '';
     });
 
+    // Create user in Firebase
     try {
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
+      // Navigate to the profile info page after registration
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => AdditionalInfoPage(userId: userCredential.user!.uid),
         ),
       );
+      // Handle known Firebase errors
     } on FirebaseAuthException catch (e) {
       setState(() {
         switch (e.code) {
@@ -88,6 +99,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   @override
+  // Clean up controllers
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();

@@ -1,4 +1,4 @@
-// connectivity_wrapper.dart
+// not implemented, unfortunately
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 

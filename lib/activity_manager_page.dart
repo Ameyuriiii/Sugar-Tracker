@@ -1,4 +1,4 @@
-// ActivityManagerPage: This page allows users to manage their activities.
+// This page allows users to manage their activities.
 // It displays a list of activities, enables adding, editing, and deleting activities,
 // and provides sorting and searching functionalities.
 
@@ -25,6 +25,7 @@ class Activity {
     this.isDone = false,
   });
 
+  // to create an Activity from Firestore document
   factory Activity.fromDocument(DocumentSnapshot doc) => Activity(
     id: doc.id,
     name: doc['name'] ?? 'Unnamed',
@@ -34,6 +35,7 @@ class Activity {
     isDone: doc['isDone'] ?? false,
   );
 
+  // Convert activity to a map for Firestore
   Map<String, dynamic> toMap() => {
     'name': name,
     'description': description,
@@ -59,6 +61,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
   @override
   void initState() {
     super.initState();
+    // Update search query in real-time
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -83,6 +86,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () async {
+              //not yeeeet :c
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Undo not implemented yet')),
               );
@@ -120,6 +124,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
         ),
         centerTitle: true,
         actions: [
+          // Sorting options
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort, color: Colors.white),
             onSelected: (value) {
@@ -148,6 +153,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
       ),
       body: Column(
         children: [
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -170,6 +176,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                   .orderBy('time', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
+                // Handle states
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: Colors.deepPurple));
                 }
@@ -201,8 +208,10 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                 }
 
                 final docs = snapshot.data!.docs;
+                // Convert documents to Activity models
                 final activities = docs.map((e) => Activity.fromDocument(e)).toList();
 
+                // Sort activities
                 activities.sort((a, b) {
                   int comparison;
                   switch (_sortBy) {
@@ -220,7 +229,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                   return _sortAscending ? comparison : -comparison;
                 });
 
-                // Filter activities based on search query
+                // Filter by search query
                 final filteredActivities = activities
                     .where((activity) =>
                 activity.name.toLowerCase().contains(_searchQuery) ||
@@ -273,6 +282,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              // Checkbox to mark as done
                               Checkbox(
                                 value: activity.isDone,
                                 onChanged: (newValue) async {
@@ -283,6 +293,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                                 activeColor: Colors.green,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                               ),
+                              // Activity content
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,6 +324,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                                   ],
                                 ),
                               ),
+                              // Edit/Delete buttons
                               Row(
                                 children: [
                                   IconButton(
@@ -413,6 +425,7 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
+                // Date/Time Picker
                 Row(
                   children: [
                     const Icon(Icons.calendar_today, size: 20, color: Colors.deepPurple),
@@ -456,10 +469,12 @@ class _ActivityManagerPageState extends State<ActivityManagerPage> {
             ),
           ),
           actions: [
+            // Cancel button
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
+            // Save button
             ElevatedButton(
               onPressed: isSaving
                   ? null

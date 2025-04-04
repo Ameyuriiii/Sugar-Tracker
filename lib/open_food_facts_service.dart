@@ -1,12 +1,18 @@
+/// A service class to interact with the Open Food Facts API.
+/// This class allows fetching detailed product information by barcode,
+/// including product name, nutrition grade, sugar content, and NutriScore data.
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class OpenFoodFactsService {
-  // This endpoint is the "Get A Product By Barcode" endpoint for production
-  // For more info, see: https://world.openfoodfacts.net/data
+  // Base URL for the Open Food Facts API
   static const String _baseUrl = 'https://world.openfoodfacts.net/api/v2/product';
 
+  /// Fetches product details using the barcode.
+  /// Returns a map containing product data if found, or null otherwise.
   static Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
+    // Construct the full request URL
     final String url = '$_baseUrl/$barcode?fields=product_name,nutriscore_data,nutrition_grades,nutriments';
 
     try {
@@ -19,7 +25,7 @@ class OpenFoodFactsService {
           // Product found
           return jsonData['product'];
         } else {
-          // Product not found in OFF database
+          // Product not found
           return null;
         }
       } else {
@@ -27,7 +33,7 @@ class OpenFoodFactsService {
         return null;
       }
     } catch (e) {
-      // Exception (e.g., network error)
+      // Handle any exception
       rethrow;
     }
   }
